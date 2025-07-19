@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEB_APP_FRONTEND_URL = os.getenv("WEB_APP_FRONTEND_URL")
+BACKEND_API_URL = os.getenv("BACKEND_API_URL")
 # WEB_APP_FRONTEND_URL="https://splitandpay.serveo.net"
 
 # Включаем логирование, чтобы видеть, что происходит
@@ -26,6 +27,22 @@ dp = Dispatcher(storage=storage)
 
 @dp.message(Command('start'))
 async def start_handler(message: types.Message):
+    user = message.from_user
+    # Собираем данные пользователя
+    user_data = {
+        "tg_id": str(user.id),
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": None  # Если хочешь получить — через WebApp или бот
+    }
+    # Отправляем на бэкенд
+    async with aiohttp.ClientSession() as session:
+        async with session.post(BACKEND_API_URL+"/users", json=user_data) as response:
+            if response.status != 200:
+                text = await response.text()
+                print(f"Ошибка при отправке пользователя: {response.status} {text}")
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -36,12 +53,6 @@ async def start_handler(message: types.Message):
             ]
         ]
     )
-    # keyboard = ReplyKeyboardMarkup(
-    #     keyboard=[
-    #         [KeyboardButton(text="Открыть WebApp", web_app=WebAppInfo(url=WEB_APP_FRONTEND_URL))]
-    #     ],
-    #     resize_keyboard=True
-    # )
     await message.answer("Нажми кнопку, чтобы открыть WebApp:", reply_markup=keyboard)
 
 @dp.message(Command("contact"))
