@@ -3,22 +3,29 @@ from enum import Enum
 from typing import ClassVar, Optional
 from datetime import datetime
 
+
 class Bank(str, Enum):
     sber = "Сбер"
     tbank = "Т-банк"
+
 
 class Role(int, Enum):
     admin = 1
     user = 2
 
+
 class UserCreate(BaseModel):
-    tg_id: str = Field(..., description="Идентификатор пользователя в Telegram")
+    tg_id: str = Field(...,
+                        description="Идентификатор пользователя в Telegram")
     username: str = Field(..., description="Username пользователя в Telegram")
-    first_name: Optional[str] = Field(..., description="Имя пользователя в Telegram")
-    last_name: Optional[str] = Field(..., description="Фамилия пользователя в Telegram")
-    phone: Optional[str] = Field(default=None, description="Телефон пользователя в Telegram")
-    bank: Optional[Bank] = Field(description="Банк пользователя")
-    role: Role = Field(default=Role.user, description="Роль пользователя в системе", alias="user_role")
+    first_name: Optional[str] = Field(
+        description="Имя пользователя в Telegram")
+    last_name: Optional[str] = Field(
+        description="Фамилия пользователя в Telegram")
+    phone: Optional[str] = Field(
+        default=None, description="Телефон пользователя в Telegram")
+    bank: Optional[Bank] = Field(default=None, description="Банк пользователя")
+    role: Optional[Role] = Field(description="Роль пользователя в системе")
 
     model_config = {
         "from_attributes": True
@@ -28,10 +35,18 @@ class UserCreate(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def downgrade_invalid_admin(cls, data: dict):
-        # Если роль admin и tg_id не разрешён — понижаем до user
-        if data.get("role") == Role.admin:
-            tg_id = data.get("tg_id")
-            if tg_id not in cls.ALLOWED_ADMINS:
-                data["role"] = Role.user
+    def downgrade_invalid_admin(cls, data):
+        # Приведение к словарю
+        if not isinstance(data, dict):
+            data = data.__dict__ if hasattr(data, "__dict__") else dict(data)
+
+        tg_id = str(data.get("tg_id"))
+        
+        # Если роль не указана, но tg_id в списке — присваиваем роль admin
+        if tg_id in cls.ALLOWED_ADMINS:
+            data["role"] = Role.admin.value
+        else:
+            data["role"] = Role.user.value
+
+        print(data)
         return data

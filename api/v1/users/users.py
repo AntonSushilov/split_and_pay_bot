@@ -8,8 +8,9 @@ from schemas import schemas
 
 router = APIRouter()
 
-@router.post("/users/", response_model=schemas.UserCreate)
+@router.post("/auth", response_model=schemas.UserCreate)
 async def create_user(user: schemas.UserCreate, session: AsyncSession = Depends(database.get_async_session)):
+    print("user",user)
     query = select(models.User).where(models.User.tg_id == user.tg_id)
     result = await session.execute(query)
     existing_user = result.scalar_one_or_none()
