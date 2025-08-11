@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Optional
 from pydantic import BaseModel
 
 class Bank(str, Enum):
@@ -18,7 +18,7 @@ T = TypeVar('T')
 # Создаем универсальную схему ответа
 class DataResponse(BaseModel, Generic[T]):
     status: str
-    data: T
+    data: Optional[T]
     message: str
 
 class AuthRequest(BaseModel):
