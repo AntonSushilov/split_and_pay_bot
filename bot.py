@@ -1,48 +1,109 @@
 import logging
 import os
-from aiogram import Bot, Dispatcher, types, F
+from aiogram import Bot, Dispatcher, types, F, Router
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.enums import ChatType
+from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.enums import ChatType, ContentType
 import aiohttp
 import asyncio
-from dotenv import load_dotenv
+
+from config import Config
 
 # Загружаем переменные из .env
-load_dotenv(".env")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEB_APP_FRONTEND_URL = os.getenv("WEB_APP_FRONTEND_URL")
-BACKEND_API_URL = os.getenv("BACKEND_API_URL")
+BOT_TOKEN = Config.BOT_TOKEN
+WEB_APP_FRONTEND_URL = Config.WEB_APP_FRONTEND_URL
+BACKEND_API_URL = Config.BACKEND_API_URL
 # WEB_APP_FRONTEND_URL="https://splitandpay.serveo.net"
 
-# Включаем логирование, чтобы видеть, что происходит
-logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+router = Router()
+dp.include_router(router)
 
-@dp.message(Command('start'))
-async def start_handler(message: types.Message):
+
+@router.message(Command("start"))
+async def start_handler(message: Message):
+    welcome_text = (
+        f"Привет, {message.from_user.first_name}!\n\n"
+        "Я — бот SplitAndPay.\n"
+        "Я помогу тебе легко и удобно делить счета и расходы с друзьями, "
+        "коллегами или семьёй.\n\n"
+        "Что я умею:\n"
+        "• создавать общие счета\n"
+        "• распределять расходы между участниками\n"
+        "Для продолжения работы, пожалуйста, отправь свой номер телефона, "
+        "нажав на кнопку ниже."
+    )
+
+    # Кнопка для запроса телефона
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📞 Отправить номер телефона",
+                            request_contact=True)]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+    await message.answer(welcome_text, reply_markup=keyboard)
+
+
+@router.message(Command("contact"))
+async def send_contact_button(message: Message):
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📞 Отправить номер телефона",
+                            request_contact=True)]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(
+        "Нажмите кнопку ниже, чтобы поделиться номером",
+        reply_markup=keyboard
+    )
+
+
+@router.message(F.content_type == ContentType.CONTACT)
+async def handle_contact(message: Message):
     user = message.from_user
+    phone = message.contact.phone_number
     # Собираем данные пользователя
     user_data = {
         "tg_id": str(user.id),
+        "chat_id": str(message.chat.id),
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "phone": None  # Если хочешь получить — через WebApp или бот
+        "phone": phone
     }
+    print(f"Собранные данные пользователя: {user_data}")
     # Отправляем на бэкенд
     async with aiohttp.ClientSession() as session:
-        async with session.post(BACKEND_API_URL+"/users", json=user_data) as response:
-            if response.status != 200:
-                text = await response.text()
-                print(f"Ошибка при отправке пользователя: {response.status} {text}")
+        await session.post(BACKEND_API_URL + "/user/add", json=user_data)
+    await message.answer(f"Спасибо! Мы получили ваш номер: {phone}",
+                         reply_markup=ReplyKeyboardRemove()
+                         )
 
+
+@router.message(Command("help"))
+async def help_handler(message: Message):
+    help_text = (
+        "Вот что я умею:\n"
+        "/start — начать работу с ботом\n"
+        "/help — показать это сообщение\n"
+        "/contact — обновить номер телефона\n\n"
+        "Я помогу тебе легко делить счета и расходы с друзьями и семьёй."
+    )
+    await message.answer(help_text)
+
+
+@router.message(Command("webapp"))
+async def webapp_handler(message: Message):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -53,26 +114,11 @@ async def start_handler(message: types.Message):
             ]
         ]
     )
-    await message.answer("Нажми кнопку, чтобы открыть WebApp:", reply_markup=keyboard)
 
-@dp.message(Command("contact"))
-async def send_contact_button(message: Message):
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📞 Отправить номер телефона", request_contact=True)]
-        ],
-        resize_keyboard=True
-    )
     await message.answer(
-        "Нажмите кнопку ниже, чтобы поделиться номером:",
+        "Нажми кнопку, чтобы открыть WebApp:",
         reply_markup=keyboard
     )
-
-@dp.message(F.content_type == "contact")
-async def handle_contact(message: Message):
-    phone = message.contact.phone_number
-    await message.answer(f"Спасибо! Мы получили ваш номер: {phone}")
-
 
 
 async def main():
@@ -80,4 +126,9 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    # Включаем логирование, чтобы видеть, что происходит
+    logging.basicConfig(level=logging.INFO)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Бот остановлен вручную.")

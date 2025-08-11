@@ -1,2 +1,2 @@
-from .schemas import Role, Bank, UserCreate
-__all__ = ['Role', 'Bank', 'UserCreate']
+from .common import *
+from .user import *

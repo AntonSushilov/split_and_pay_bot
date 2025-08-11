@@ -4,27 +4,29 @@ import enum
 
 Base = declarative_base()
 
+
 class Bank(str, enum.Enum):
     sber = "Сбер"
     tbank = "Т-банк"
 
+
 class Role(int, enum.Enum):
     admin = 1
     user = 2
+
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     tg_id = Column(String, unique=True, index=True, nullable=False)
+    chat_id = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, nullable=False)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     bank = Column(SqlEnum(Bank), nullable=True)
     role = Column(SqlEnum(Role), default=Role.user, nullable=False)
-    
-
 
 
 # id = db.Column(db.Integer, primary_key=True)
@@ -42,7 +44,6 @@ class User(Base):
 #     description = db.Column(db.String(200))
 #     created_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    
 
 # class EventParticipant(db.Model):
 #     id = db.Column(db.Integer, primary_key=True)
