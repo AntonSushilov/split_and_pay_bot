@@ -27,7 +27,11 @@ dp.include_router(router)
 
 
 @router.message(Command("start"))
-async def start_handler(message: Message):
+async def start_handler(message: Message) -> None:
+    """
+    Обработчик команды /start.
+    Отправляет приветственное сообщение и кнопку для отправки номера телефона.
+    """
     welcome_text = (
         f"Привет, {message.from_user.first_name}!\n\n"
         "Я — бот SplitAndPay.\n"
@@ -54,7 +58,11 @@ async def start_handler(message: Message):
 
 
 @router.message(Command("contact"))
-async def send_contact_button(message: Message):
+async def send_contact_button(message: Message) -> None:
+    """
+    Обработчик команды /contact.
+    Отправляет кнопку для отправки номера телефона.
+    """
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📞 Отправить номер телефона",
@@ -69,7 +77,11 @@ async def send_contact_button(message: Message):
 
 
 @router.message(F.content_type == ContentType.CONTACT)
-async def handle_contact(message: Message):
+async def handle_contact(message: Message) -> None:
+    """
+    Обработчик сообщений с типом CONTENT.CONTACT.
+    Обрабатывает полученный контакт пользователя, собирает данные и отправляет их на бэкенд.
+    """
     user = message.from_user
     phone = message.contact.phone_number
     # Собираем данные пользователя
@@ -91,7 +103,11 @@ async def handle_contact(message: Message):
 
 
 @router.message(Command("help"))
-async def help_handler(message: Message):
+async def help_handler(message: Message) -> None:
+    """
+    Обработчик команды /help.
+    Отправляет сообщение с описанием доступных команд.
+    """
     help_text = (
         "Вот что я умею:\n"
         "/start — начать работу с ботом\n"
@@ -103,7 +119,11 @@ async def help_handler(message: Message):
 
 
 @router.message(Command("webapp"))
-async def webapp_handler(message: Message):
+async def webapp_handler(message: Message) -> None:
+    """
+    Обработчик команды /webapp.
+    Отправляет кнопку для открытия WebApp.
+    """
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -121,11 +141,17 @@ async def webapp_handler(message: Message):
     )
 
 
-async def main():
+async def main() -> None:
+    """
+    Основная функция для запуска бота.
+    """
     # Запуск бота
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
+    """
+    Точка входа в приложение.
+    """
     # Включаем логирование, чтобы видеть, что происходит
     logging.basicConfig(level=logging.INFO)
     try:
