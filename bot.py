@@ -113,17 +113,40 @@ async def help_handler(message: Message) -> None:
         "/start — начать работу с ботом\n"
         "/help — показать это сообщение\n"
         "/contact — обновить номер телефона\n\n"
+        "/webapp - открыть приложение"
         "Я помогу тебе легко делить счета и расходы с друзьями и семьёй."
     )
     await message.answer(help_text)
+
+
+async def check_user_phone(user_id: str) -> bool:
+    """
+    Проверяет, указан ли телефон пользователя на бэкенде.
+    """
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(f"{BACKEND_API_URL}/user/{user_id}")
+        if response.status == 200:
+            user_data = await response.json()
+            return user_data.get("phone") is not None
+        return False
 
 
 @router.message(Command("webapp"))
 async def webapp_handler(message: Message) -> None:
     """
     Обработчик команды /webapp.
-    Отправляет кнопку для открытия WebApp.
+    Проверяет, указан ли телефон пользователя, и отправляет кнопку для открытия WebApp, если телефон указан.
+    Если телефон не указан, просит пользователя указать телефон через команду /contact.
     """
+    user_id = str(message.from_user.id)
+    phone_exists = await check_user_phone(user_id)
+
+    if not phone_exists:
+        await message.answer(
+            "Для использования WebApp, пожалуйста, укажите свой номер телефона через команду /contact."
+        )
+        return
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [

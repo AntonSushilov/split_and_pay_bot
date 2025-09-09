@@ -3,6 +3,7 @@ import logging
 from typing import Dict
 
 from .users import users
+from .events import events
 
 router = APIRouter()
 
@@ -17,3 +18,4 @@ async def read_root() -> Dict[str, str]:
 
 # Include the users router with a prefix and tags
 router.include_router(users.router, prefix="/users", tags=["Users"])
+router.include_router(events.router, prefix="/events", tags=["Events"])

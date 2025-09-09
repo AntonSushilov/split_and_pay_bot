@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
     # ⏳ Запуск при старте
     logging.info("Initializing database...")
     async with database.engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all())
+        await conn.run_sync(lambda sync_conn: models.Base.metadata.create_all(bind=sync_conn))
     logging.info("Database initialized")
     yield
     logging.info("Shutting down...")
