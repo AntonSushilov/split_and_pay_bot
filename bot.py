@@ -27,7 +27,11 @@ dp.include_router(router)
 
 
 @router.message(Command("start"))
-async def start_handler(message: Message):
+async def start_handler(message: Message) -> None:
+    """
+    Обработчик команды /start.
+    Отправляет приветственное сообщение и кнопку для отправки номера телефона.
+    """
     welcome_text = (
         f"Привет, {message.from_user.first_name}!\n\n"
         "Я — бот SplitAndPay.\n"
@@ -54,7 +58,11 @@ async def start_handler(message: Message):
 
 
 @router.message(Command("contact"))
-async def send_contact_button(message: Message):
+async def send_contact_button(message: Message) -> None:
+    """
+    Обработчик команды /contact.
+    Отправляет кнопку для отправки номера телефона.
+    """
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📞 Отправить номер телефона",
@@ -69,7 +77,11 @@ async def send_contact_button(message: Message):
 
 
 @router.message(F.content_type == ContentType.CONTACT)
-async def handle_contact(message: Message):
+async def handle_contact(message: Message) -> None:
+    """
+    Обработчик сообщений с типом CONTENT.CONTACT.
+    Обрабатывает полученный контакт пользователя, собирает данные и отправляет их на бэкенд.
+    """
     user = message.from_user
     phone = message.contact.phone_number
     # Собираем данные пользователя
@@ -91,19 +103,50 @@ async def handle_contact(message: Message):
 
 
 @router.message(Command("help"))
-async def help_handler(message: Message):
+async def help_handler(message: Message) -> None:
+    """
+    Обработчик команды /help.
+    Отправляет сообщение с описанием доступных команд.
+    """
     help_text = (
         "Вот что я умею:\n"
         "/start — начать работу с ботом\n"
         "/help — показать это сообщение\n"
         "/contact — обновить номер телефона\n\n"
+        "/webapp - открыть приложение"
         "Я помогу тебе легко делить счета и расходы с друзьями и семьёй."
     )
     await message.answer(help_text)
 
 
+async def check_user_phone(user_id: str) -> bool:
+    """
+    Проверяет, указан ли телефон пользователя на бэкенде.
+    """
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(f"{BACKEND_API_URL}/user/{user_id}")
+        if response.status == 200:
+            user_data = await response.json()
+            return user_data.get("phone") is not None
+        return False
+
+
 @router.message(Command("webapp"))
-async def webapp_handler(message: Message):
+async def webapp_handler(message: Message) -> None:
+    """
+    Обработчик команды /webapp.
+    Проверяет, указан ли телефон пользователя, и отправляет кнопку для открытия WebApp, если телефон указан.
+    Если телефон не указан, просит пользователя указать телефон через команду /contact.
+    """
+    user_id = str(message.from_user.id)
+    phone_exists = await check_user_phone(user_id)
+
+    if not phone_exists:
+        await message.answer(
+            "Для использования WebApp, пожалуйста, укажите свой номер телефона через команду /contact."
+        )
+        return
+
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -121,11 +164,17 @@ async def webapp_handler(message: Message):
     )
 
 
-async def main():
+async def main() -> None:
+    """
+    Основная функция для запуска бота.
+    """
     # Запуск бота
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
+    """
+    Точка входа в приложение.
+    """
     # Включаем логирование, чтобы видеть, что происходит
     logging.basicConfig(level=logging.INFO)
     try:

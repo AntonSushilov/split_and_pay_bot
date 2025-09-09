@@ -16,8 +16,6 @@ async def create_user(user: UserCreate, session: AsyncSession = Depends(database
     query = select(models.User).where(models.User.tg_id == user.tg_id)
     result = await session.execute(query)
     existing_user = result.scalar_one_or_none()
-    print("*" * 20)
-    print(f"Проверка существования пользователя: {existing_user}")
     if existing_user:
         return {
             "status": "success",
